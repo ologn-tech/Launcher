@@ -3,6 +3,7 @@ package com.osamaalek.kiosklauncher.util
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.util.Log
 import com.osamaalek.kiosklauncher.model.AppInfo
 
 // AppsUtil.kt
@@ -20,6 +21,7 @@ class AppsUtil {
             val allApps = packageManager.queryIntentActivities(i, 0)
             for (ri in allApps) {
                 val packageName = ri.activityInfo.packageName
+//                Log.d("AppUtil", "asfsdfsd "+ packageName );
                 if (!onlySelected || selectedApps == null || selectedApps.contains(packageName)) {
                     val app = AppInfo(
                         ri.loadLabel(packageManager),

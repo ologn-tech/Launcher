@@ -1,8 +1,10 @@
 package com.osamaalek.kiosklauncher
 
+import android.app.ActivityManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -12,20 +14,19 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.provider.Settings
-import android.text.InputFilter
-import android.text.InputType
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
-import android.widget.EditText
-import android.widget.GridLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.osamaalek.kiosklauncher.ui.MainActivity
+import java.io.BufferedReader
+import java.io.InputStreamReader
+
 
 class FloatingButtonService : Service() {
 
@@ -35,6 +36,7 @@ class FloatingButtonService : Service() {
     private var clickCount = 0
     private val resetClickHandler = Handler()
     private val resetClickRunnable = Runnable { clickCount = 0 }
+    private var currentApp =""
 
     companion object {
         var isFloatingViewVisible = false
@@ -73,7 +75,7 @@ class FloatingButtonService : Service() {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
             stopSelf()
-            Log.d("FloatingButtonService", "stop self")
+//            Log.d("FloatingButtonService", "stop self")
             isFloatingViewVisible = false
             return
         }
@@ -82,7 +84,7 @@ class FloatingButtonService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val buttonWidth = 200
-        val buttonHeight = 100
+        val buttonHeight = 150
 
         val params = WindowManager.LayoutParams(
             buttonWidth,
@@ -92,7 +94,7 @@ class FloatingButtonService : Service() {
             PixelFormat.TRANSLUCENT
         )
 
-        params.gravity = Gravity.TOP or Gravity.RIGHT
+        params.gravity = Gravity.BOTTOM or Gravity.LEFT
         params.x = 0
         params.y = 0
 
@@ -110,10 +112,10 @@ class FloatingButtonService : Service() {
             resetClickHandler.removeCallbacks(resetClickRunnable)
             resetClickHandler.postDelayed(resetClickRunnable, 2000)
 
-            Toast.makeText(this, "Click $clickCount / 5 to exit", Toast.LENGTH_SHORT).show()
-
             if (clickCount >= 5) {
-                showPinOverlayDialog()
+                currentApp = getCurrentApp().toString();
+                if (!currentApp.contains("kiosklauncher"))
+                        showPinOverlayDialog()
             }
         }
 
@@ -142,6 +144,7 @@ class FloatingButtonService : Service() {
         layoutParams.gravity = Gravity.CENTER
 
         val pinDisplay = view.findViewById<TextView>(R.id.pinDisplay)
+        val button0 = view.findViewById<Button>(R.id.button0)
         val button1 = view.findViewById<Button>(R.id.button1)
         val button2 = view.findViewById<Button>(R.id.button2)
         val button3 = view.findViewById<Button>(R.id.button3)
@@ -156,7 +159,7 @@ class FloatingButtonService : Service() {
         var enteredPin = ""
 
         // Set click listeners for each number button
-        val buttons = listOf(button1, button2, button3, button4, button5, button6, button7, button8, button9)
+        val buttons = listOf(button0,button1, button2, button3, button4, button5, button6, button7, button8, button9)
         buttons.forEach { button ->
             button.setOnClickListener {
                 enteredPin += button.text.toString()  // Append clicked number
@@ -169,12 +172,11 @@ class FloatingButtonService : Service() {
         val btnCancel = view.findViewById<Button>(R.id.cancelButton)
 
         btnOk.setOnClickListener {
-            if (enteredPin == "1234") {
-                Toast.makeText(this, "Correct PIN", Toast.LENGTH_SHORT).show()
+            if (enteredPin == getKioskPassword()) {
+                killApp(currentApp)
                 val intent = Intent(this, MainActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
-
                 try {
                     pinDialogView?.let {
                         windowManager.removeView(it)
@@ -208,9 +210,47 @@ class FloatingButtonService : Service() {
         }
     }
 
+    private fun getCurrentApp(): String? {
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val currentTime = System.currentTimeMillis()
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            currentTime - 10000,
+            currentTime
+        )
 
+        if (!stats.isNullOrEmpty()) {
+            val recentApp = stats.maxByOrNull { it.lastTimeUsed }
+            return recentApp?.packageName
+        }
+        return null
+    }
 
+    fun getKioskPassword(): String? {
+        try {
+            val process = Runtime.getRuntime()
+                .exec(arrayOf("su", "-c", "getprop persist.vendor.mikiosk.password"))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val password = reader.readLine()
+            reader.close()
+            return password?.trim { it <= ' ' }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
 
+    private fun killApp(packageName: String) {
+//        Log.d("gfgdgdfg","gdfgdfg "+currentApp);
+        try {
+            val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+            activityManager.killBackgroundProcesses(packageName)
+//            Toast.makeText(this, "Force stopped: $packageName", Toast.LENGTH_SHORT).show()
+        } catch (e: java.lang.Exception) {
+//            Toast.makeText(this, "Failed to force stop: $packageName", Toast.LENGTH_SHORT).show()
+            e.printStackTrace()
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
