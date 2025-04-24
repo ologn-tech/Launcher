@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="app/src/main/res/drawable/bottom_shadow.xml" value="0.168" />
+        <entry key="app/src/main/res/drawable/top_shadow.xml" value="0.168" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.13246970330129546" />
+        <entry key="app/src/main/res/layout/fragment_apps_list.xml" value="0.25" />
+        <entry key="app/src/main/res/layout/fragment_home.xml" value="0.27105600684053016" />
+        <entry key="app/src/main/res/layout/holder_app.xml" value="0.2702009405728944" />
+        <entry key="app/src/main/res/xml/device_admin_conf.xml" value="0.2697734074390765" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="jbr-17" project-jdk-type="JavaSDK" />
+</project>
